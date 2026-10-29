@@ -1,0 +1,17 @@
+const key='circle-demo-v1';
+const me={_id:'demo-me',name:'Alex Morgan',username:'alexmorgan',email:'alex@example.com',dateOfBirth:'2000-01-01',gender:'male'};
+const initial={user:me,posts:[{_id:'demo-1',body:'A little reminder to step outside, take a breath, and notice the good things. What made you smile today? 🌿',user:{_id:'demo-j',name:'Jamie Chen',username:'jamiechen'},createdAt:new Date(Date.now()-3600000).toISOString(),commentsCount:1},{_id:'demo-2',body:'Just finished building my first social app. Small steps, lots of coffee, and a community that makes learning better. ✨',user:me,createdAt:new Date(Date.now()-7200000).toISOString(),commentsCount:0}],comments:{'demo-1':[{_id:'demo-c',content:'An afternoon walk and a really good playlist ☀️',commentCreator:me,createdAt:new Date().toISOString()}]}};
+export function demoClient(){let db=JSON.parse(localStorage.getItem(key)||'null')||structuredClone(initial);const save=()=>localStorage.setItem(key,JSON.stringify(db));return async(path,{method='GET',body}={})=>{
+await new Promise(r=>setTimeout(r,180));const url=new URL(path,'http://demo');const p=url.pathname.split('/').filter(Boolean);const values=body instanceof FormData?Object.fromEntries(body):body||{};const uid=()=>crypto.randomUUID();let result={};
+if(path==='/users/profile-data')result={user:db.user};
+else if(path==='/users/change-password')result={token:'demo-token'};
+else if(path==='/users/upload-photo'){db.user.photo=await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(values.photo);});result={user:db.user};}
+else if(p[0]==='posts' && (!p[1]||p[1]==='feed') && method==='GET'){let posts=[...db.posts].reverse();if(url.searchParams.get('only')==='me')posts=posts.filter(x=>x.user._id===me._id);const page=Number(url.searchParams.get('page')||1),limit=Number(url.searchParams.get('limit')||10);result={posts:posts.slice((page-1)*limit,page*limit)};}
+else if(p[0]==='posts'&&!p[1]&&method==='POST'){const post={_id:uid(),body:values.body||'',image:await image(values.image),user:db.user,createdAt:new Date().toISOString(),commentsCount:0};db.posts.push(post);result={post};}
+else if(p[0]==='posts'){const post=db.posts.find(x=>x._id===p[1]);if(!post)throw Error('Post not found.');if(p[2]==='comments'){const comments=db.comments[p[1]] ||= [];if(method==='GET'){const page=Number(url.searchParams.get('page')||1);result={comments:comments.slice((page-1)*10,page*10)};}else if(method==='POST'){const comment={_id:uid(),content:values.content,image:await image(values.image),commentCreator:db.user,createdAt:new Date().toISOString()};comments.push(comment);post.commentsCount=comments.length;result={comment};}else{const i=comments.findIndex(x=>x._id===p[3]);if(method==='DELETE')comments.splice(i,1);else Object.assign(comments[i],{content:values.content,...(values.image?{image:await image(values.image)}:{})});post.commentsCount=comments.length;}}
+else if(p[2]==='like'){post.liked=!post.liked;post.likesCount=post.liked?1:0;result={post};}
+else if(method==='DELETE'){db.posts=db.posts.filter(x=>x._id!==p[1]);delete db.comments[p[1]];}
+else if(method==='PUT'){post.body=values.body??post.body;if(values.image)post.image=await image(values.image);result={post};}
+else result={post};}
+save();return {success:true,data:result};};}
+async function image(file){if(!file||!file.size)return '';return new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(file);});}
