@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-29T08:38:12.720Z",
+  "kind": "read-only unauthenticated checks",
+  "results": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "message": "Route Posts API is running",
+      "expected": 200,
+      "pass": true
+    },
+    {
+      "path": "/users/profile-data",
+      "status": 401,
+      "message": "token not provided",
+      "expected": 401,
+      "pass": true
+    },
+    {
+      "path": "/posts?page=1&limit=1",
+      "status": 401,
+      "message": "token not provided",
+      "expected": 401,
+      "pass": true
+    }
+  ]
+}
